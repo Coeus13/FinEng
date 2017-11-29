@@ -1,0 +1,143 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Created on Tue Nov 14 17:48:24 2017
+
+@author: huntermoore
+"""
+
+#Bring in necessary files
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+from pandas import * #This allows for use of Int64Index
+
+#Read in and parse XLS files in dataframes
+xls_file = pd.ExcelFile('/Users/huntermoore/Desktop/Financial Engineering Project/commodityandbtcdata.xlsx')
+
+#Cryptocurrencies
+bitcoin = xls_file.parse('btc')
+eth = xls_file.parse('eth')
+ltc = xls_file.parse('ltc')
+etc = xls_file.parse('etc')
+
+#Commodities
+gold = xls_file.parse('gold')
+silver = xls_file.parse('silver')
+copper = xls_file.parse('copper')
+platinum = xls_file.parse('platinum')
+crudeoil = xls_file.parse('crudeoil')
+naturalgas = xls_file.parse('naturalgas')
+
+#Fiat currencies
+euro = xls_file.parse('euro')
+gbp = xls_file.parse('gbp')
+jpy = xls_file.parse('jpy')
+
+#Stocks
+amd = xls_file.parse('amd')
+intc = xls_file.parse('intc')
+gbtc = xls_file.parse('gbtc')
+nvda = xls_file.parse('nvda')
+ostk = xls_file.parse('ostk')
+sandp = xls_file.parse('sandp')
+dji = xls_file.parse('dji')
+
+#Other
+gasoline = xls_file.parse('gasoline')
+us2ybond = xls_file.parse('us2ybond')
+
+#Create a dataframe that compares bitcoin to commodities
+btccomm = bitcoin.merge(gold, on = 'date').merge(silver, on = 'date').merge(copper, on = 'date').merge(platinum, on = 'date').merge(crudeoil, on = 'date').merge(naturalgas, on = 'date')
+
+#Create a dataframe that compares bitcoin to altcoins
+btcalt = bitcoin.merge(eth, on = 'date').merge(ltc, on = 'date').merge(etc, on = 'date')
+
+#Create a dataframe that compares bitcoin to fiat money
+btcfiat = bitcoin.merge(euro, on = 'date').merge(gbp, on = 'date').merge(jpy, on = 'date')
+
+#Create a dataframe that compares bitcoin to stocks
+btcstock = bitcoin.merge(amd, on = 'date').merge(intc, on = 'date').merge(gbtc, on = 'date').merge(nvda, on = 'date').merge(ostk, on = 'date').merge(sandp, on = 'date').merge(dji, on = 'date')
+
+#Create a dataframe that compares bitcoin to other
+btcother = bitcoin.merge(gasoline, on = 'date').merge(us2ybond, on = 'date')
+
+#Create combined dataframe to compare everything
+
+comboframe = bitcoin.merge(gold, on = 'date').merge(silver, on = 'date').merge(copper, on = 'date').merge(platinum, on = 'date').merge(crudeoil, on = 'date').merge(naturalgas, on = 'date').merge(eth, on = 'date').merge(ltc, on = 'date').merge(etc, on = 'date').merge(euro, on = 'date').merge(gbp, on = 'date').merge(jpy, on = 'date').merge(amd, on = 'date').merge(intc, on = 'date').merge(gbtc, on = 'date').merge(nvda, on = 'date').merge(ostk, on = 'date').merge(sandp, on = 'date').merge(dji, on = 'date').merge(gasoline, on = 'date').merge(us2ybond, on = 'date')
+
+
+#Local window time-series correlation of BTC vs OSTK
+#Using a window of 1 month
+#Creation of combinatory dataframe
+btcostk = bitcoin.merge(ostk, on = 'date') #This allows for cleaning of dates that only apply to one entity
+btcostk['date'] = pd.to_datetime(btcostk['date']) #This sets the date column to the datetime format for easy movement through dates
+idx = Int64Index([1,2]) #This allows for indexing of correlation dataframe
+btcostk['index_col'] = btcostk.index #This creates a new column which is a copy of the index column and gives it a callable name
+
+#This while loop creates the running correlation array for BTC and OSTK
+#The finalenddate and currentenddate values allow for a determination of when to end
+deltat = '1000 days' #This is the averaging window for the time-series correlation
+timeseriescorr = np.empty([1,btcostk['date'].size - 1]) #Array for holding time-series correlation factors
+currentstartdate = btcostk.get_value(0, 'date') #Creates the initial start date
+finalenddate = btcostk.get_value(btcostk['date'].size  - 1, 'date')
+currentenddate = currentstartdate + pd.Timedelta(deltat)
+z = 0 #Counter variable for timeseriescorr array
+w = 0 #Counter variable for indices index
+indices = np.empty([1,1])
+indices = indices.ravel()
+#btcostk = pd.Index(btcostk)
+while currentenddate < finalenddate:
+    mask = (btcostk['date'] > currentstartdate) & (btcostk['date'] <= currentenddate) #Creation of initial mask
+    size = btcostk['date'].loc[mask].count() #Creates initial window size
+    
+    for y in mask:
+        indices = np.append(indices, btcostk.loc[mask].index_col)
+        w +=1
+    
+    i = 0 #Creation of indexer variable for array filling
+    #Decleration of arrays
+    btcpricearray = np.empty([1,size])
+    ostkpricearray = np.empty([1,size])
+    datearray = np.empty([1,size], dtype = 'datetime64[s]')
+    d = np.empty([1,size]) #Creation of index array for currentwindow dataframe
+    #Fill in arrays based on date range
+    for x in range(0, size):
+        btcpricearray[0][i] = btcostk.get_value(x,'btcprice')
+        ostkpricearray[0][i] = btcostk.get_value(x,'ostkprice')
+        datearray[0][i] = btcostk.get_value(x,'date')
+        d[0][i] = i
+        i += 1
+    #Flatten np arrays so that they can be formed into a dataframe
+    btcpricearray = btcpricearray.ravel()
+    ostkpricearray = ostkpricearray.ravel()
+    datearray = datearray.ravel()
+    d = d.ravel()
+    #Creation of temporary dataframe for correlation calculation
+    data = {'date':datearray, 'btcprice':btcpricearray, 'ostkprice':ostkpricearray}
+    currentwindow = pd.DataFrame(data, index = d)
+    currentcorr = currentwindow.corr()
+    currentcorr = currentcorr.set_index(idx) #Sets an index column for using get_value
+    timeseriescorr[0][z] = currentcorr.get_value(2,'btcprice') #Current correlation value
+    currentstartdate = currentstartdate + pd.Timedelta('1 days')
+    currentenddate = currentstartdate + pd.Timedelta(deltat)
+    
+timeseriescorr = timeseriescorr.ravel()
+
+#Once I create the dataframe I will take the correlation value of this and place
+#it in an array of correlation values that relate to each window and then plot that
+
+"""
+#Efforts on time-series correlation
+
+#Creation of training dataframes
+btctrain_total_rows = xls_file.book.sheet_by_name('btc').nrows - 1
+btctrain_skipfooter = btctrain_total_rows - 150
+btctrain = xls_file.parse('btc', skip_footer = btctrain_skipfooter)
+goldtrain_total_rows = xls_file.book.sheet_by_name('gold').nrows - 1
+goldtrain_skipfooter = goldtrain_total_rows - 150
+goldtrain = xls_file.parse('gold', skip_footer = goldtrain_skipfooter)
+
+#Creation of combined training dataframe
+btcgoldtrain = btctrain.merge(goldtrain, on = 'date')
+"""
