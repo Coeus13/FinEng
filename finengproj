@@ -16,7 +16,7 @@ from pandas import * #This allows for use of Int64Index
 xls_file = pd.ExcelFile('/Users/huntermoore/Desktop/Financial Engineering Project/commodityandbtcdata.xlsx')
 
 #Cryptocurrencies
-bitcoin = xls_file.parse('btc')
+btc = xls_file.parse('btc')
 eth = xls_file.parse('eth')
 ltc = xls_file.parse('ltc')
 etc = xls_file.parse('etc')
@@ -42,39 +42,43 @@ nvda = xls_file.parse('nvda')
 ostk = xls_file.parse('ostk')
 sandp = xls_file.parse('sandp')
 dji = xls_file.parse('dji')
+deere = xls_file.parse('deere')
 
 #Other
 gasoline = xls_file.parse('gasoline')
 us2ybond = xls_file.parse('us2ybond')
 
-#Create a dataframe that compares bitcoin to commodities
-btccomm = bitcoin.merge(gold, on = 'date').merge(silver, on = 'date').merge(copper, on = 'date').merge(platinum, on = 'date').merge(crudeoil, on = 'date').merge(naturalgas, on = 'date')
+#Platinum associated stocks
+ivn = xls_file.parse('ivn')
+sbgl = xls_file.parse('sbgl')
+wg = xls_file.parse('wg')
+plg = xls_file.parse('plg')
 
-#Create a dataframe that compares bitcoin to altcoins
-btcalt = bitcoin.merge(eth, on = 'date').merge(ltc, on = 'date').merge(etc, on = 'date')
+#Start evaluation of individual correlation calculations (I need to calculate individually because of date issues)
+labels = ['btc','eth','ltc','etc','gold','silver','copper','platinum','crudeoil','naturalgas','euro','gbp','jpy','amd','intc','gbtc','nvda','ostk','sandp','dji','deere','gasoline','us2ybond','ivn','sbgl','wg','plg']   #This creates a label array for the dataframe
+mainframe = pd.DataFrame(index=labels, columns=labels)  #Creation of dataframe for holding correlation values
 
-#Create a dataframe that compares bitcoin to fiat money
-btcfiat = bitcoin.merge(euro, on = 'date').merge(gbp, on = 'date').merge(jpy, on = 'date')
+#Creation of function for getting indivdual correlation values
+def getcorr(df1,df2):
+    newframe = df1.merge(df2, on = 'date').corr()
+    return newframe[df1.columns[1]][df2.columns[1]]
 
-#Create a dataframe that compares bitcoin to stocks
-btcstock = bitcoin.merge(amd, on = 'date').merge(intc, on = 'date').merge(gbtc, on = 'date').merge(nvda, on = 'date').merge(ostk, on = 'date').merge(sandp, on = 'date').merge(dji, on = 'date')
-
-#Create a dataframe that compares bitcoin to other
-btcother = bitcoin.merge(gasoline, on = 'date').merge(us2ybond, on = 'date')
-
-#Create combined dataframe to compare everything
-
-comboframe = bitcoin.merge(gold, on = 'date').merge(silver, on = 'date').merge(copper, on = 'date').merge(platinum, on = 'date').merge(crudeoil, on = 'date').merge(naturalgas, on = 'date').merge(eth, on = 'date').merge(ltc, on = 'date').merge(etc, on = 'date').merge(euro, on = 'date').merge(gbp, on = 'date').merge(jpy, on = 'date').merge(amd, on = 'date').merge(intc, on = 'date').merge(gbtc, on = 'date').merge(nvda, on = 'date').merge(ostk, on = 'date').merge(sandp, on = 'date').merge(dji, on = 'date').merge(gasoline, on = 'date').merge(us2ybond, on = 'date')
-
+#Calculation of individual correlation values to populate dataframe
+for x in range(0,len(labels)):
+    for y in range(0,len(labels)):
+        if x == y:
+            mainframe[labels[x]][labels[y]] = 1
+        else:
+            mainframe[labels[x]][labels[y]] = getcorr(locals()[labels[x]],locals()[labels[y]])
 
 #Local window time-series correlation of BTC vs OSTK
 #Using a window of 1 month
 #Creation of combinatory dataframe
-btcostk = bitcoin.merge(ostk, on = 'date') #This allows for cleaning of dates that only apply to one entity
+btcostk = btc.merge(ostk, on = 'date') #This allows for cleaning of dates that only apply to one entity
 btcostk['date'] = pd.to_datetime(btcostk['date']) #This sets the date column to the datetime format for easy movement through dates
 idx = Int64Index([1,2]) #This allows for indexing of correlation dataframe
 btcostk['index_col'] = btcostk.index #This creates a new column which is a copy of the index column and gives it a callable name
-
+"""
 #This while loop creates the running correlation array for BTC and OSTK
 #The finalenddate and currentenddate values allow for a determination of when to end
 deltat = '1000 days' #This is the averaging window for the time-series correlation
@@ -126,7 +130,7 @@ timeseriescorr = timeseriescorr.ravel()
 
 #Once I create the dataframe I will take the correlation value of this and place
 #it in an array of correlation values that relate to each window and then plot that
-
+"""
 """
 #Efforts on time-series correlation
 
